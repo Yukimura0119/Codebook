@@ -1,22 +1,45 @@
-#include <bits/stdc++.h>
+
+#include <math.h>
+
+#include <iostream>
 typedef long long ll;
 using namespace std;
 
+//常數很大 小心食用XD
+// Todo:Smartpoint
+
 struct Node {
     int data;
+    int rev;
+    int _max;
     int size;
-    int used_cnt;
     Node *l, *r;
-    Node(int x) : data(x), size(1), used_cnt(0), l(0), r(0) {}
-    void Resize() {
+    Node(int x) : data(x), rev(0), _max(x), size(1), l(0), r(0) {}
+    void update() {
         size = 1;
-        if (l) size += l->size;
-        if (r) size += r->size;
+        _max = data;
+        if (l) {
+            size += l->size;
+            _max = max(l->_max, _max);
+        }
+        if (r) {
+            size += r->size;
+            _max = max(_max, r->_max);
+        }
+    }
+    void lazy() {
+        if (rev) {
+            swap(l, r);
+            if (l) l->rev = l->rev ^ 1;
+            if (r) r->rev = r->rev ^ 1;
+            rev = 0;
+        }
     }
 } * root;
 
 int size(Node* a) { return a ? a->size : 0; }
 
+// Smartpoint
 // void Used(Node *a) {
 //     if (a) a->used_cnt++;
 // }
@@ -35,14 +58,16 @@ int size(Node* a) { return a ? a->size : 0; }
 Node* Merge(Node* a, Node* b) {
     if (!a || !b) return a ? a : b;
     if (rand() % (a->size + b->size) < a->size) {
-        // a = new Node(*a);
+        a->lazy();
+        a = new Node(*a);
         a->r = Merge(a->r, b);
-        a->Resize();
+        a->update();
         return a;
     } else {
-        // b = new Node(*b);
+        b->lazy();
+        b = new Node(*b);
         b->l = Merge(a, b->l);
-        b->Resize();
+        b->update();
         return b;
     }
 }
@@ -52,7 +77,8 @@ void Split(Node* tar, Node*& a, Node*& b, int k) {
     if (!tar)
         a = b = 0;
     else {
-        // tar = new Node(*tar);
+        tar->lazy();
+        tar = new Node(*tar);
         if (k <= size(tar->l)) {
             b = tar;
             Split(tar->l, a, b->l, k);
@@ -60,69 +86,61 @@ void Split(Node* tar, Node*& a, Node*& b, int k) {
             a = tar;
             Split(tar->r, a->r, b, k - size(tar->l) - 1);
         }
-        tar->Resize();
+        tar->update();
     }
 }
 
-//小於k的分至a
-void Split2(Node* tar, Node*& a, Node*& b, int k) {
-    if (!tar)
-        a = b = 0;
-    else {
-        // tar = new Node(*tar);
-        if (tar->data < k) {
-            a = tar;
-            Split2(tar->r, a->r, b, k);
-        } else {
-            b = tar;
-            Split2(tar->l, a, b->l, k);
-        }
-        tar->Resize();
-    }
+void Insert(Node*& tar, int k) { tar = Merge(tar, new Node(k)); }
+
+//得到第k個節點
+Node* GetKth(Node*& tar, int k) {
+    Node *lower, *ans, *upper;
+    Split(tar, lower, upper, k);
+    Split(lower, lower, ans, k - 1);
+    tar = Merge(Merge(lower, ans), upper);
+    return ans;
 }
 
-void Insert(Node*& tar, int k) {
-    Node *a, *b;
-    Split2(tar, a, b, k);
-    tar = Merge(Merge(a, new Node(k)), b);
-}
-
-//回傳成功或失敗
-bool Erase(Node*& tar, int k) {
-    if (!tar) return 0;
-    Node* tmp;
-    if (tar->data == k) {
-        tmp = tar;
-        tar = Merge(tar->l, tar->r);
-        delete tmp;
-        return 1;
-    } else if (tar->data < k)
-        tmp = tar->r;
-    else {
-        tmp = tar->l;
-    }
-    if (Erase(tmp, k)) {
-        tar->Resize();
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
-void Traversal(Node* a, int dep) {
+//遍歷
+void Traversal(Node* a) {
     if (!a) return;
-    Traversal(a->l, dep + 1);
-    cout << a->data << ' ' << dep << '\n';
-    Traversal(a->r, dep + 1);
+    a->lazy();  //可能懶標還沒推完
+    Traversal(a->l);
+    // Do something with a
+    cout << a->data << ' ';
+    Traversal(a->r);
+}
+
+//區間反轉
+void Reverse(Node*& tar, int l, int r) {
+    Node *low, *aim, *up;
+    Split(tar, low, aim, l - 1);
+    Split(aim, aim, up, r - l + 1);
+    aim->rev = aim->rev ^ 1;
+    tar = Merge(Merge(low, aim), up);
+}
+
+//區間最大值
+int Query(Node*& tar, int l, int r) {
+    Node *low, *aim, *up;
+    Split(tar, low, aim, l - 1);
+    Split(aim, aim, up, r - l + 1);
+    aim->lazy();
+    int ans = aim->_max;
+    tar = Merge(Merge(low, aim), up);
+    return ans;
 }
 
 int main() {
     srand(time(NULL));
     int n, data;
     cin >> n;
-    for (int i = 0; i < n; i++) {
+    while (n--) {
         cin >> data;
         Insert(root, data);
     }
+    root = Merge(root, root);
+    Traversal(root);
+    cout << '\n';
     return 0;
 }
