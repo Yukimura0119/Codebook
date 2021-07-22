@@ -12,28 +12,38 @@
 typedef long long ll;
 using namespace std;
 
-int not_prime[MaxN + 1];
+int pfactor[MaxN + 1];
 vector<int> prime = {2};
 map<int, int> factor;
 
-void Sieve(int n) {
+void Eratosthenes(int n) {
     int i;
     for (i = 3; i * i <= n; i += 2) {
-        if (!not_prime[i]) {  // i借计
+        if (!pfactor[i]) {  // i借计
             prime.emplace_back(i);
             for (int j = i * i; j <= n; j += (2 * i))
-                //磷秨案计i*i计穦砆ㄤ借计縵
-                not_prime[j] = i;  //魁砆街縵
+                //磷秨案计i*i穦砆ㄤi计縵奔
+                pfactor[j] = i;  //魁j砆借计i縵奔
         }
     }
     for (; i <= n; i += 2)
-        if (!not_prime[i]) prime.emplace_back(i);
+        if (!pfactor[i]) prime.emplace_back(i);
+}
+
+void Linear(int n) {
+    for (int i = 2; i <= n; i++) {
+        if (!pfactor[i]) prime.emplace_back(i);
+        for (int j = 0; j < prime.size() && (i * prime[j] <= n); j++) {
+            pfactor[i * prime[j]] = prime[j];
+            if (i % prime[j] == 0) break;
+        }
+    }
 }
 
 void Factorization(int n) {
     factor.clear();
     while (n > 1) {
-        int p = ((n % 2) ? not_prime[n] : 2);
+        int p = ((n % 2) ? pfactor[n] : 2);
         if (p == 0) {
             p = n;
         }
@@ -45,8 +55,8 @@ void Factorization(int n) {
 }
 
 int main() {
-    Sieve(MaxN);
-    Factorization(40);
+    Linear(MaxN);
+    Factorization(121);
     for (auto i : factor) {
         cout << i.first << ' ' << i.second << '\n';
     }
